@@ -2,38 +2,82 @@
 
 export const runtime = 'edge';
 
-const offers = [
-  {name:'Email Toolkit',network:'ClickBank',commission:'$14.00',epc:'$0.62',links:1,status:'Active'},
-  {name:'Sleep Reset',network:'ClickBank',commission:'$18.00',epc:'$0.51',links:1,status:'Active'},
-  {name:'AI Funnel Builder',network:'WarriorPlus',commission:'$12.00',epc:'$0.43',links:1,status:'Active'},
-  {name:'Wellness Guide',network:'Direct',commission:'$9.00',epc:'$0.31',links:1,status:'Active'},
-  {name:'Legacy Offer',network:'JVZoo',commission:'$10.00',epc:'$0.15',links:1,status:'Broken'},
-  {name:'Pinterest Kit',network:'Direct',commission:'Lead magnet',epc:'—',links:1,status:'Paused'},
-];
+import { useState, useEffect, useCallback } from 'react';
+
+interface OfferItem {
+  id: string;
+  name: string;
+  network: string;
+  commission_label: string;
+  status: string;
+  canonical_url: string;
+  created_at: string;
+}
 
 const initials = (name: string) => name.split(' ').slice(0,2).map(x=>x[0]).join('').toUpperCase();
 
 export default function OffersPage() {
+  const [offers, setOffers] = useState<OfferItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const fetchOffers = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/offers');
+      if (!res.ok) throw new Error('Failed to fetch offers');
+      const data = await res.json();
+      setOffers(Array.isArray(data) ? data : []);
+    } catch {
+      setError('Could not load offers. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchOffers();
+  }, [fetchOffers]);
+
   return (
     <section className="page active" id="page-offers">
       <div className="page-heading"><div><p className="eyebrow">OFFER VAULT</p><h1>Offers</h1><p>Keep destination URLs, networks, commissions, and fallback links organized.</p></div><button className="btn primary">＋ Add offer</button></div>
-      <div className="offer-grid" id="offerGrid">
-        {offers.map(o => (
-          <article key={o.name} className="panel offer-card">
-            <div className="offer-top">
-              <span className="offer-logo">{initials(o.name)}</span>
-              <div><h3>{o.name}</h3><p>{o.network}</p></div>
-              <span className={`badge ${o.status==='Active'?'success':o.status==='Broken'?'danger':'warning'}`}>{o.status}</span>
-            </div>
-            <div className="offer-meta">
-              <div><span>Commission</span><strong>{o.commission}</strong></div>
-              <div><span>EPC</span><strong>{o.epc}</strong></div>
-              <div><span>Smart links</span><strong>{o.links}</strong></div>
-            </div>
-            <div className="offer-footer"><span>Destination checked 2h ago</span><button className="text-btn">View offer →</button></div>
-          </article>
-        ))}
-      </div>
+      {loading ? (
+        <div style={{padding:'48px',textAlign:'center',color:'var(--muted)'}}>
+          <div style={{fontSize:18,marginBottom:8}}>Loading offers…</div>
+        </div>
+      ) : error ? (
+        <div style={{padding:'48px',textAlign:'center',color:'var(--red)'}}>
+          <div style={{fontSize:18,marginBottom:8}}>{error}</div>
+          <button className="btn ghost" onClick={fetchOffers}>Retry</button>
+        </div>
+      ) : offers.length === 0 ? (
+        <div style={{padding:'48px',textAlign:'center',color:'var(--muted)'}}>
+          <div style={{fontSize:18,marginBottom:8}}>No offers yet</div>
+          <small>Add your first offer to start tracking commissions.</small>
+        </div>
+      ) : (
+        <div className="offer-grid" id="offerGrid">
+          {offers.map(o => {
+            const badgeClass = o.status === 'active' ? 'success' : o.status === 'archived' ? 'danger' : 'warning';
+            const displayStatus = o.status[0].toUpperCase() + o.status.slice(1);
+            return (
+              <article key={o.id} className="panel offer-card">
+                <div className="offer-top">
+                  <span className="offer-logo">{initials(o.name)}</span>
+                  <div><h3>{o.name}</h3><p>{o.network || 'Direct'}</p></div>
+                  <span className={`badge ${badgeClass}`}>{displayStatus}</span>
+                </div>
+                <div className="offer-meta">
+                  <div><span>Commission</span><strong>{o.commission_label || '—'}</strong></div>
+                  <div><span>Network</span><strong>{o.network || 'Direct'}</strong></div>
+                </div>
+                <div className="offer-footer"><span>Created {new Date(o.created_at).toLocaleDateString()}</span><button className="text-btn">View offer →</button></div>
+              </article>
+            );
+          })}
+        </div>
+      )}
     </section>
   );
 }

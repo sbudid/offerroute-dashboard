@@ -38,8 +38,29 @@ export default function AppShell({ children }: AppShellProps) {
   const [paletteQuery, setPaletteQuery] = useState('');
   const [toastMessage, setToastMessage] = useState('');
   const [toastVisible, setToastVisible] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [linkCount, setLinkCount] = useState(0);
 
   const pageTitle = pageLabels[pathname] || 'Overview';
+
+  // Fetch link count for sidebar badge
+  useEffect(() => {
+    const fetchCount = async () => {
+      try {
+        const res = await fetch('/api/links');
+        if (res.ok) {
+          const data = await res.json();
+          setLinkCount(Array.isArray(data) ? data.length : 0);
+        }
+      } catch {
+        // ignore
+      }
+    };
+    fetchCount();
+    const handler = () => fetchCount();
+    window.addEventListener('links-updated' as string, handler as EventListener);
+    return () => window.removeEventListener('links-updated' as string, handler as EventListener);
+  }, []);
 
   // Toast system
   const showToast = useCallback((message: string) => {
@@ -99,27 +120,56 @@ export default function AppShell({ children }: AppShellProps) {
     const pageResults = pages
       .filter(p => p.label.toLowerCase().includes(q))
       .map(p => ({ type: 'page' as const, label: p.label, sub: 'Open page', path: p.path }));
-    // static links for command palette
-    const staticLinks = [
-      { name: 'Email Toolkit Promo', domain: 'go.incomecloser.com', slug: 'email-toolkit' },
-      { name: 'Sleep Reset Guide', domain: 'go.healthyzo.com', slug: 'sleep' },
-      { name: 'AI Funnel Builder', domain: 'go.incomecloser.com', slug: 'funnel-ai' },
-      { name: 'Wellness Starter Guide', domain: 'go.healthyzo.com', slug: 'wellness' },
-      { name: 'Old Product Redirect', domain: 'go.incomecloser.com', slug: 'old-offer' },
-      { name: 'Pinterest Lead Magnet', domain: 'go.incomecloser.com', slug: 'pin-kit' },
-    ];
-    const linkResults = staticLinks
-      .filter(l => [l.name, l.slug, l.domain].join(' ').toLowerCase().includes(q))
-      .slice(0, 6)
-      .map(l => ({ type: 'link' as const, label: l.name, sub: `${l.domain}/${l.slug}`, path: '/links' }));
-    return [...pageResults, ...linkResults].slice(0, 9);
+    return [...pageResults].slice(0, 9);
   })();
 
-  const handleCreateLink = (e: FormEvent<HTMLFormElement>) => {
+  const handleCreateLink = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setModalOpen(false);
-    showToast('Smart link created');
-    navigate('/links');
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+
+    const name = formData.get('name') as string;
+    const slug = formData.get('slug') as string;
+    const destination = formData.get('destination') as string;
+
+    if (!name || !slug || !destination) {
+      showToast('Please fill in all required fields');
+      return;
+    }
+
+    setCreating(true);
+    try {
+      const res = await fetch('/api/links', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          slug,
+          destination_url: destination,
+          domain_id: null, // Will need domain lookup
+          offer_id: null,
+          status: 'active',
+        }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Failed to create link');
+      }
+
+      setModalOpen(false);
+      form.reset();
+      showToast('Smart link created');
+      // Dispatch event to refresh links list
+      window.dispatchEvent(new Event('links-updated'));
+      if (pathname !== '/links') {
+        navigate('/links');
+      }
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Failed to create link');
+    } finally {
+      setCreating(false);
+    }
   };
 
   return (
@@ -141,7 +191,7 @@ export default function AppShell({ children }: AppShellProps) {
             >
               <span className="nav-icon">{p.icon}</span>
               <span>{p.label}</span>
-              {p.count !== undefined && <span className="nav-count" id="navLinkCount">{p.count}</span>}
+              {p.path === '/links' && <span className="nav-count" id="navLinkCount">{linkCount}</span>}
               {p.hasDot && <span className="status-dot warning"></span>}
             </button>
           ))}
@@ -162,8 +212,8 @@ export default function AppShell({ children }: AppShellProps) {
         </nav>
 
         <div className="workspace-card">
-          <div className="workspace-row"><span className="avatar">BD</span><div><strong>Budi&apos;s Workspace</strong><span>Pro plan</span></div><button className="icon-btn">⋯</button></div>
-          <div className="usage"><div><span>Monthly clicks</span><strong>62%</strong></div><div className="progress"><i style={{width:'62%'}}></i></div><small>31,240 of 50,000</small></div>
+          <div className="workspace-row"><span className="avatar">WS</span><div><strong>Workspace</strong><span>Free plan</span></div><button className="icon-btn">⋯</button></div>
+          <div className="usage"><div><span>Monthly clicks</span><strong>0%</strong></div><div className="progress"><i style={{width:'0%'}}></i></div><small>0 of 10,000</small></div>
         </div>
       </aside>
 
@@ -200,7 +250,7 @@ export default function AppShell({ children }: AppShellProps) {
               <label className="full">Tags<input name="tags" placeholder="email, newsletter, evergreen" /></label>
             </div>
             <details className="advanced"><summary>Advanced routing options <span>＋</span></summary><div className="advanced-grid"><label>Fallback URL<input type="url" name="fallback" placeholder="https://your-site.com/recommended" /></label><label>Traffic split<select name="split"><option>100% primary destination</option><option>50 / 50 A/B test</option><option>Custom weighted split</option></select></label><label>Country rule<select name="country"><option>No country rule</option><option>United States</option><option>Indonesia</option><option>United Kingdom</option></select></label><label>Device rule<select name="device"><option>All devices</option><option>Mobile only</option><option>Desktop only</option></select></label></div></details>
-            <div className="modal-footer"><button type="button" className="btn ghost" id="cancelModal" onClick={() => setModalOpen(false)}>Cancel</button><button type="submit" className="btn primary">Create smart link</button></div>
+            <div className="modal-footer"><button type="button" className="btn ghost" id="cancelModal" onClick={() => setModalOpen(false)}>Cancel</button><button type="submit" className="btn primary" disabled={creating}>{creating ? 'Creating…' : 'Create smart link'}</button></div>
           </form>
         </div>
       </div>

@@ -27,6 +27,8 @@ export default function LoginPage() {
         const { error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
       }
+      // Auto-create workspace if needed
+      await fetch('/api/setup', { method: 'POST' });
       router.push('/dashboard');
       router.refresh();
     } catch (err: unknown) {

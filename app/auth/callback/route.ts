@@ -12,6 +12,38 @@ export async function GET(request: Request) {
     const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
+      // Auto-create workspace if user doesn't have one
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: existingMember } = await supabase
+          .from('workspace_members')
+          .select('workspace_id')
+          .eq('user_id', user.id)
+          .limit(1)
+          .single();
+
+        if (!existingMember) {
+          // Create workspace
+          const { data: workspace } = await supabase
+            .from('workspaces')
+            .insert({
+              name: 'My Workspace',
+              owner_id: user.id,
+              plan: 'free',
+            })
+            .select()
+            .single();
+
+          if (workspace) {
+            await supabase.from('workspace_members').insert({
+              workspace_id: workspace.id,
+              user_id: user.id,
+              role: 'owner',
+            });
+          }
+        }
+      }
+
       return NextResponse.redirect(`${origin}${next}`);
     }
   }

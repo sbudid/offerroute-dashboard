@@ -19,7 +19,6 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError('');
-
     try {
       if (mode === 'login') {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -38,79 +37,66 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-zinc-950 to-zinc-900 px-4">
-      <div className="w-full max-w-md space-y-8">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold tracking-tight text-white">
-            Offer<span className="text-emerald-400">Route</span>
-          </h1>
-          <p className="mt-2 text-sm text-zinc-400">
-            Affiliate Link Control Center
-          </p>
+    <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: 'var(--bg)', padding: '24px' }}>
+      <div style={{ width: '100%', maxWidth: 420 }}>
+        <div style={{ textAlign: 'center', marginBottom: 32 }}>
+          <div style={{ width: 52, height: 52, borderRadius: 14, background: 'linear-gradient(135deg,#806fff,#5b45ee)', color: 'white', display: 'grid', placeItems: 'center', margin: '0 auto 16px', boxShadow: '0 8px 20px rgba(103,85,245,.3)' }}>
+            <svg viewBox="0 0 32 32" fill="none" width={28} height={28}><path d="M8 8h8a6 6 0 0 1 0 12h-3" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/><path d="M24 24h-8a6 6 0 0 1 0-12h3" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/></svg>
+          </div>
+          <h1 style={{ fontSize: 24, fontWeight: 700, color: 'var(--text)' }}>OfferRoute</h1>
+          <p style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>Affiliate Link Control Center</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="mt-8 space-y-6 rounded-xl border border-zinc-800 bg-zinc-900/50 p-8">
-          <h2 className="text-xl font-semibold text-white">
+        <div className="panel" style={{ padding: 32, borderRadius: 'var(--radius)', boxShadow: 'var(--shadow)' }}>
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', marginBottom: 20 }}>
             {mode === 'login' ? 'Sign in to your account' : 'Create an account'}
           </h2>
 
           {error && (
-            <div className="rounded-lg border border-red-800/50 bg-red-900/20 px-4 py-3 text-sm text-red-400">
+            <div style={{ background: 'var(--red-soft)', color: 'var(--red)', padding: '10px 14px', borderRadius: 10, fontSize: 13, marginBottom: 16 }}>
               {error}
             </div>
           )}
 
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-zinc-300">
-                Email address
-              </label>
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <label>
+              <span style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 6 }}>Email address</span>
               <input
-                id="email"
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 block w-full rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-3 text-white placeholder-zinc-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                 placeholder="you@example.com"
+                style={{ width: '100%' }}
               />
-            </div>
-
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-zinc-300">
-                Password
-              </label>
+            </label>
+            <label>
+              <span style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 6 }}>Password</span>
               <input
-                id="password"
                 type="password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 block w-full rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-3 text-white placeholder-zinc-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                 placeholder="••••••••"
+                style={{ width: '100%' }}
               />
-            </div>
-          </div>
+            </label>
+            <button type="submit" className="btn primary" disabled={loading} style={{ width: '100%', justifyContent: 'center', marginTop: 8 }}>
+              {loading ? 'Loading…' : mode === 'login' ? 'Sign in' : 'Sign up'}
+            </button>
+          </form>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-lg bg-emerald-600 px-4 py-3 font-medium text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {loading ? 'Loading...' : mode === 'login' ? 'Sign in' : 'Sign up'}
-          </button>
-
-          <p className="text-center text-sm text-zinc-400">
+          <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--muted)', marginTop: 20 }}>
             {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
             <button
               type="button"
               onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError(''); }}
-              className="font-medium text-emerald-400 hover:text-emerald-300"
+              style={{ background: 'none', border: 0, color: 'var(--primary)', fontWeight: 600, fontSize: 13, padding: 0 }}
             >
               {mode === 'login' ? 'Sign up' : 'Sign in'}
             </button>
           </p>
-        </form>
+        </div>
       </div>
     </div>
   );

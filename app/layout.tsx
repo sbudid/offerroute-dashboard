@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
-import "./globals.css";
+import { Inter } from "next/font/google";
+
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "OfferRoute Dashboard",
-  description: "Link management and offer routing platform",
+  title: "OfferRoute — Affiliate Link Control Center",
+  description: "OfferRoute — affiliate link control center prototype",
 };
 
 export default function RootLayout({
@@ -13,7 +15,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="bg-gray-950 text-white antialiased">
+      <head>
+        <link rel="stylesheet" href="/prototype.css" />
+      </head>
+      <body className={inter.className}>
         {children}
       </body>
     </html>
